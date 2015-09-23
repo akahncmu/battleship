@@ -1,0 +1,17 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  p1o: MyText
+  p1d: MyText
+  p2o: MyText
+  p2d: MyText
+  p1damage: 1
+  p2damage: 1
+
+two:
+  p1o: MyText
+  p1d: MyText
+  p2o: MyText
+  p2d: MyText
+  p1damage: 1
+  p2damage: 1

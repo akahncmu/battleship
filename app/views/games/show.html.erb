@@ -1,0 +1,34 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>P1o:</strong>
+  <%= @game.p1o %>
+</p>
+
+<p>
+  <strong>P1d:</strong>
+  <%= @game.p1d %>
+</p>
+
+<p>
+  <strong>P2o:</strong>
+  <%= @game.p2o %>
+</p>
+
+<p>
+  <strong>P2d:</strong>
+  <%= @game.p2d %>
+</p>
+
+<p>
+  <strong>P1damage:</strong>
+  <%= @game.p1damage %>
+</p>
+
+<p>
+  <strong>P2damage:</strong>
+  <%= @game.p2damage %>
+</p>
+
+<%= link_to 'Edit', edit_game_path(@game) %> |
+<%= link_to 'Back', games_path %>

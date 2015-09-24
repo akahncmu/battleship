@@ -1,5 +1,7 @@
 class GamesController < ApplicationController
   before_action :set_game, only: [:show, :edit, :update, :destroy]
+  protect_from_forgery with: :null_session
+  #now CSRF vulnerable
 
   # GET /games
   # GET /games.json
@@ -13,48 +15,24 @@ class GamesController < ApplicationController
   end
 
   # GET /games/new
+  # the board is oriented with 0,0 in top-left
+  # on defense 'o' is empty space, '-' is part of a ship that has not been hit, and 'x' is part of a ship that has
   def new
     @game = Game.new
-    @game.p1d = [['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o']]
-    @game.p1o = [['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o']]
-    @game.p2d = [['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o']]
-    @game.p2o = [['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o'],
-        ['o','o','o','o','o','o','o','o','o','o']]
+    @game.p1d = Array.new(10) { Array.new(10) }
+    @game.p1o = Array.new(10) { Array.new(10) }
+    @game.p2d = Array.new(10) { Array.new(10) }
+    @game.p2o = Array.new(10) { Array.new(10) }
+    for i in 0..9
+      for j in 0..9
+        @game.p1d[i][j]='o'
+        @game.p2d[i][j]='o'
+        @game.p1o[i][j]='o'
+        @game.p2o[i][j]='o'
+      end
+    end
+
+
     @game.p1damage = 0
     @game.p2damage = 0
     if @game.save
@@ -82,6 +60,104 @@ class GamesController < ApplicationController
         format.html { render :new }
         format.json { render json: @game.errors, status: :unprocessable_entity }
       end
+    end
+  end
+
+  # POST /games/1/placeship
+  # POST /games/1/placeship.json
+  #TODO: keep track of which ships are already used so players have to place the right quantity of each ship type,
+  #      and server will know when setup is complete.  For now, client side would have to track that.
+  #TODO: this will partially place the ship, even if it errors later on.  check before placing any part of the ship
+  # id (ex. 1) is game_id
+  # orientation is 'h'orizontal or 'v'ertical
+  # player is 1 or 2
+  # shipsize is 2, 3, 4, or 5
+  # xcoord, ycoord are starting position of the ship.  it will go right or down from there.
+  def placeship
+    @game = Game.find(params[:id])
+    params[:orientation]
+    if(params[:player] == '1')
+      for i in 0.. params[:shipsize].to_i-1
+        if(params[:orientation]=='h')
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10 - params[:shipsize].to_i)
+            #error handling, ship placed at least partially off the board
+            STDERR.puts "!!!!!ship off the board!!!!!"
+          else
+            if(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] == 'o')
+              @game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] = '-'
+            elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] == '-')
+              #error-handling: cannot place ship there, it overlaps another ship
+              STDERR.puts "!!!!!ship overlap!!!!!"
+            else
+              #error-handling: something went wrong, unexpected character in game board.  Were you trying to place a ship midgame?
+              STDERR.puts "!!!!!unexpected character!!!!!"+@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i]
+            end
+          end
+        elsif(params[:orientation] == 'v')
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 - params[:shipsize].to_i || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10)
+            #error handling, ship placed at least partially off the board
+            STDERR.puts "!!!!!ship off the board!!!!!"
+          else
+            if(@game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] == 'o')
+              @game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] = '-'
+            elsif(@game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] == '-')
+              #error-handling: cannot place ship there, it overlaps another ship
+              STDERR.puts "!!!!!ship overlap!!!!!"
+            else
+              #error-handling: something went wrong, unexpected character in game board. Were you trying to place a ship midgame?
+              STDERR.puts "!!!!!unexpected character!!!!!"
+            end
+          end
+        else
+          #error handling - orientation invalid
+          STDERR.puts "!!!!!invalid orientation!!!!!"
+        end
+      end
+    elsif(params[:player] == '2')
+      for i in 0..params[:shipsize].to_i-1
+        if(params[:orientation] == 'h')
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10 - params[:shipsize].to_i)
+            #error handling, ship placed at least partially off the board
+            STDERR.puts "!!!!!ship off the board!!!!!"
+          else
+            if(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] == 'o')
+              @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] = '-'
+            elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] == '-')
+              #error-handling: cannot place ship there, it overlaps another ship
+              STDERR.puts "!!!!!ship overlap!!!!!"
+            else
+              #error-handling: something went wrong, unexpected character in game board.  Were you trying to place a ship midgame?
+              STDERR.puts "!!!!!unexpected character!!!!!"
+            end
+          end
+        elsif(params[:orientation] == 'v')
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 - params[:shipsize].to_i  || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10)
+            #error handling, ship placed at least partially off the board
+            STDERR.puts "!!!!!ship off the board!!!!!"
+          else
+            if(@game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] == 'o')
+              @game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] = '-'
+            elsif(@game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] == '-')
+              #error-handling: cannot place ship there, it overlaps another ship
+              STDERR.puts "!!!!!ship overlap!!!!!"
+            else
+              #error-handling: something went wrong, unexpected character in game board. Were you trying to place a ship midgame?
+              STDERR.puts "!!!!!unexpected character!!!!!"
+            end
+          end
+        else
+          #error handling - orientation invalid
+          STDERR.puts "!!!!!invalid orientation!!!!!"
+        end
+      end
+    else
+      #error handlins - playor invalid
+      STDERR.puts "!!!!!invalid player!!!!!"
+    end
+    if @game.save
+      STDERR.puts 'ship placement successful' 
+    else
+      STDERR.puts 'ship placement failed.' 
     end
   end
 

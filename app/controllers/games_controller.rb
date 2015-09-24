@@ -17,6 +17,8 @@ class GamesController < ApplicationController
   # GET /games/new
   # the board is oriented with 0,0 in top-left
   # on defense 'o' is empty space, '-' is part of a ship that has not been hit, and 'x' is part of a ship that has
+  # on offense, 'o' is a space that has not been fired at, '-' is a fired miss, and 'x' is a fired hit
+  # TODO: for security, make user object, and place each board under that, 
   def new
     @game = Game.new
     @game.p1d = Array.new(10) { Array.new(10) }
@@ -63,12 +65,12 @@ class GamesController < ApplicationController
     end
   end
 
-  # POST /games/1/placeship
-  # POST /games/1/placeship.json
+  # POST /games/placeship
+  # POST /games/placeship.json
   #TODO: keep track of which ships are already used so players have to place the right quantity of each ship type,
   #      and server will know when setup is complete.  For now, client side would have to track that.
   #TODO: this will partially place the ship, even if it errors later on.  check before placing any part of the ship
-  # id (ex. 1) is game_id
+  # id is game_id
   # orientation is 'h'orizontal or 'v'ertical
   # player is 1 or 2
   # shipsize is 2, 3, 4, or 5
@@ -79,7 +81,7 @@ class GamesController < ApplicationController
     if(params[:player] == '1')
       for i in 0.. params[:shipsize].to_i-1
         if(params[:orientation]=='h')
-          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10 - params[:shipsize].to_i)
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i >= 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i >= 10 - params[:shipsize].to_i)
             #error handling, ship placed at least partially off the board
             STDERR.puts "!!!!!ship off the board!!!!!"
           else
@@ -94,7 +96,7 @@ class GamesController < ApplicationController
             end
           end
         elsif(params[:orientation] == 'v')
-          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 - params[:shipsize].to_i || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10)
+          if(params[:xcoord].to_i < 0 || params[:ycoord].to_i >= 10 - params[:shipsize].to_i || params[:ycoord].to_i < 0 || params[:xcoord].to_i >= 10)
             #error handling, ship placed at least partially off the board
             STDERR.puts "!!!!!ship off the board!!!!!"
           else
@@ -160,6 +162,70 @@ class GamesController < ApplicationController
       STDERR.puts 'ship placement failed.' 
     end
   end
+
+  # POST /games/fire
+  # POST /games/fire
+  #TODO: 
+  #TODO: for now, it doesn't track when a ship is sunk (I don't remember standard gameplay behavior)
+  #       this also means it is up to client to know when damage hits max (2+3+3+4+5 = 17) that the game is over
+  # id (ex. 1) is game_id
+  # player is 1 or 2
+  # xcoord, ycoord are the coordinates being fired at
+  def fire
+    @game = Game.find(params[:id])
+    if(params[:player] == '1')
+      if(params[:xcoord].to_i >= 0 && params[:xcoord].to_i < 10 && params[:ycoord].to_i >= 0 && params[:ycoord].to_i < 10)
+        if(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == 'o') #miss
+          @game.p1o[params[:xcoord].to_i][params[:ycoord].to_i] = '-'
+          @notice = "you've missed"
+        elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == 'x') #already fired hit
+          #do we allow players to fire on a spot they've already fired? or let them waste a turn?
+          @notice = "you've already fired there"
+        elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == '-') #new hit
+          @notice = "you've fired a successful hit"
+          @game.p2damage+1
+          @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
+          @game.p1o[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
+        else
+          #error-handline: unexpected character on the board
+          STDERR.puts "!!!!!error unexpected char!!!!!" + @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i]
+        end
+      else
+        #error-handling, fire coordinates out of bounds, or otherwise invalid
+        STDERR.puts "!!!!!error coordinates invalid!!!!!"
+      end
+    elsif(params[:player] =='2')
+      if(params[:xcoord].to_i >= 0 && params[:xcoord].to_i < 10 && params[:ycoord].to_i >= 0 && params[:ycoord].to_i < 10)
+        if(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == 'o') #miss
+          @game.p2o[params[:xcoord].to_i][params[:ycoord].to_i] = '-'
+          @notice = "you've missed"
+        elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == 'x') #already fired hit
+          #do we allow players to fire on a spot they've already fired? or let them waste a turn?
+          @notice = "you've already fired there"
+        elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == '-') #new hit
+          @game.p1damage = @game.p1damage+1
+          @game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
+          @game.p2o[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
+          @notice = "you've fired a successful hit"
+        else
+          #error-handline: unexpected character on the board
+          STDERR.puts "!!!!!error unexpected char!!!!! "
+        end
+      else
+        #error-handling, fire coordinates out of bounds, or otherwise invalid
+        STDERR.puts "!!!!!error coordinated invalid!!!!!"
+      end
+    else
+      #error handling - invalid player
+      STDERR.puts "!!!!!error player char!!!!!"
+    end
+    if @game.save
+      STDERR.puts @notice 
+    else
+      STDERR.puts 'fire failed.' 
+    end
+  end
+
 
   # PATCH/PUT /games/1
   # PATCH/PUT /games/1.json

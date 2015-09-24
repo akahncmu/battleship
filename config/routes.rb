@@ -2,7 +2,7 @@ Rails.application.routes.draw do
   resources :games do
     collection do
       post :placeship
-      put :fire
+      post :fire
     end
   end
   # The priority is based upon order of creation: first created -> highest priority.

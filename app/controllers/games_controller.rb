@@ -83,36 +83,47 @@ class GamesController < ApplicationController
         if(params[:orientation]=='h')
           if(params[:xcoord].to_i < 0 || params[:ycoord].to_i >= 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i >= 10 - params[:shipsize].to_i)
             #error handling, ship placed at least partially off the board
-            STDERR.puts "!!!!!ship off the board!!!!!"
+            @notice = "iinvalid coordinates, ship placed off the board" 
+            @status = 400
           else
             if(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] == 'o')
               @game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] = '-'
+              @notice = "ship placed successfully" 
+              @status = 200
             elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i] == '-')
               #error-handling: cannot place ship there, it overlaps another ship
-              STDERR.puts "!!!!!ship overlap!!!!!"
+              @notice = "invalid ship placement, it overlaps an existing ship" 
+              @status = 400
             else
               #error-handling: something went wrong, unexpected character in game board.  Were you trying to place a ship midgame?
-              STDERR.puts "!!!!!unexpected character!!!!!"+@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i+i]
+              @notice = "unexpected character on the board" 
+              @status = 500
             end
           end
         elsif(params[:orientation] == 'v')
           if(params[:xcoord].to_i < 0 || params[:ycoord].to_i >= 10 - params[:shipsize].to_i || params[:ycoord].to_i < 0 || params[:xcoord].to_i >= 10)
             #error handling, ship placed at least partially off the board
-            STDERR.puts "!!!!!ship off the board!!!!!"
+            @notice = "invalid coordinates, ship placed off the board"
+            @status = 400
           else
             if(@game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] == 'o')
               @game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] = '-'
+              @notice = "ship placed successfully" 
+              @status = 200
             elsif(@game.p1d[params[:xcoord].to_i+i][params[:ycoord].to_i] == '-')
               #error-handling: cannot place ship there, it overlaps another ship
-              STDERR.puts "!!!!!ship overlap!!!!!"
+              @notice = "invalid ship placement, it overlaps an existing ship" 
+              @status = 400
             else
               #error-handling: something went wrong, unexpected character in game board. Were you trying to place a ship midgame?
-              STDERR.puts "!!!!!unexpected character!!!!!"
+              @notice = "unexpected character on the board" 
+              @status = 500
             end
           end
         else
           #error handling - orientation invalid
-          STDERR.puts "!!!!!invalid orientation!!!!!"
+          @notice = "invalid orientation" 
+          @status = 400
         end
       end
     elsif(params[:player] == '2')
@@ -120,46 +131,58 @@ class GamesController < ApplicationController
         if(params[:orientation] == 'h')
           if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10 - params[:shipsize].to_i)
             #error handling, ship placed at least partially off the board
-            STDERR.puts "!!!!!ship off the board!!!!!"
+            @notice = "invalid coordinates, ship placed off the board"
+            @status = 400
           else
             if(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] == 'o')
               @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] = '-'
+              @notice = "ship placed successfully" 
+              @status = 200
             elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i+i] == '-')
               #error-handling: cannot place ship there, it overlaps another ship
-              STDERR.puts "!!!!!ship overlap!!!!!"
+              @notice = "invalid ship placement, it overlaps an existing ship" 
+              @status = 400
             else
               #error-handling: something went wrong, unexpected character in game board.  Were you trying to place a ship midgame?
-              STDERR.puts "!!!!!unexpected character!!!!!"
+              @notice = "unexpected character on the board" 
+              @status = 500
             end
           end
         elsif(params[:orientation] == 'v')
           if(params[:xcoord].to_i < 0 || params[:ycoord].to_i > 10 - params[:shipsize].to_i  || params[:ycoord].to_i < 0 || params[:xcoord].to_i > 10)
             #error handling, ship placed at least partially off the board
-            STDERR.puts "!!!!!ship off the board!!!!!"
+            @notice = "invalid coordinates, ship placed off the board" 
+            @status = 400
           else
             if(@game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] == 'o')
               @game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] = '-'
+              @notice = "ship placed successfully" 
+              @status = 200
             elsif(@game.p2d[params[:xcoord].to_i+i][params[:ycoord].to_i] == '-')
               #error-handling: cannot place ship there, it overlaps another ship
-              STDERR.puts "!!!!!ship overlap!!!!!"
+              @notice = "invalid ship placement, it overlaps an existing ship" 
+              @status = 400
             else
               #error-handling: something went wrong, unexpected character in game board. Were you trying to place a ship midgame?
-              STDERR.puts "!!!!!unexpected character!!!!!"
+              @notice = "unexpected character on the board" 
+              @status = 500
             end
           end
         else
           #error handling - orientation invalid
-          STDERR.puts "!!!!!invalid orientation!!!!!"
+          @notice = "invalid orientation" 
+      @status = 400
         end
       end
     else
       #error handlins - playor invalid
-      STDERR.puts "!!!!!invalid player!!!!!"
+      @notice = "invalid player" 
+      @status = 400
     end
     if @game.save
-      STDERR.puts 'ship placement successful' 
+      render json: { message: @notice, status: @status } 
     else
-      STDERR.puts 'ship placement failed.' 
+      render json: { message:'ship placement failed.', status: 500 }
     end
   end
 
@@ -178,17 +201,21 @@ class GamesController < ApplicationController
         if(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == 'o') #miss
           @game.p1o[params[:xcoord].to_i][params[:ycoord].to_i] = '-'
           @notice = "you've missed"
+          @status = 200
         elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == 'x') #already fired hit
           #do we allow players to fire on a spot they've already fired? or let them waste a turn?
           @notice = "you've already fired there"
+          @status = 200
         elsif(@game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] == '-') #new hit
-          @notice = "you've fired a successful hit"
           @game.p2damage+1
           @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
           @game.p1o[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
+          @notice = "you've fired a successful hit"
+          @status = 200
         else
           #error-handline: unexpected character on the board
-          STDERR.puts "!!!!!error unexpected char!!!!!" + @game.p2d[params[:xcoord].to_i][params[:ycoord].to_i]
+          @notice = "unexpected character on the board"
+          @status = 500
         end
       else
         #error-handling, fire coordinates out of bounds, or otherwise invalid
@@ -199,30 +226,36 @@ class GamesController < ApplicationController
         if(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == 'o') #miss
           @game.p2o[params[:xcoord].to_i][params[:ycoord].to_i] = '-'
           @notice = "you've missed"
+          @status = 200
         elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == 'x') #already fired hit
           #do we allow players to fire on a spot they've already fired? or let them waste a turn?
           @notice = "you've already fired there"
+          @status = 200
         elsif(@game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] == '-') #new hit
           @game.p1damage = @game.p1damage+1
           @game.p1d[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
           @game.p2o[params[:xcoord].to_i][params[:ycoord].to_i] = 'x'
           @notice = "you've fired a successful hit"
+          @status = 200
         else
           #error-handline: unexpected character on the board
-          STDERR.puts "!!!!!error unexpected char!!!!! "
+          @notice = "unexpected character on the board"
+          @status = 500
         end
       else
         #error-handling, fire coordinates out of bounds, or otherwise invalid
-        STDERR.puts "!!!!!error coordinated invalid!!!!!"
+        @notice = "invalid fire coordinates"
+        @status = 400
       end
     else
       #error handling - invalid player
-      STDERR.puts "!!!!!error player char!!!!!"
+      @notice = "invalid player"
+      @status = 400
     end
     if @game.save
-      STDERR.puts @notice 
+      render json: { message: @notice, status: @status } 
     else
-      STDERR.puts 'fire failed.' 
+      render json: { message:'fire failed.', status: 500 }
     end
   end
 

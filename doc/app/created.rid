@@ -1,0 +1,7 @@
+Thu, 24 Sep 2015 16:15:40 -0700
+README.rdoc	Thu, 24 Sep 2015 16:15:35 -0700
+app/controllers/application_controller.rb	Wed, 16 Sep 2015 11:09:14 -0700
+app/controllers/games_controller.rb	Thu, 24 Sep 2015 15:34:10 -0700
+app/helpers/application_helper.rb	Wed, 16 Sep 2015 11:09:14 -0700
+app/helpers/games_helper.rb	Thu, 17 Sep 2015 11:56:27 -0700
+app/models/game.rb	Wed, 23 Sep 2015 12:10:44 -0700

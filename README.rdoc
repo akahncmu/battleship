@@ -1,28 +1,64 @@
 == README
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+* Simple battleship app in RoR
+* intializes an empty DB, with one table for the games
+* server will support mutiple games simultaneously
+* typical flow would be: create new game, place ships, take turns firing, delete game when done
 
-Things you may want to cover:
+== Writeup
 
-* Ruby version
+I enjoyed this assignment.  It has been a few years since I did rails development, so I used this as an opportunity to brush up.  For me, the most challenging part was getting back into the rails state of mind.  I was stuck for a little bit figuring out which qualifier I needed for the attributes.  Figuring out how to persist a 2d array to the DB, but realizing that I didn't need anything for the primitive attributes, since they were inferred from the schema.  Looking at it now, I would probably have created objects for users and ships, where a game has many (2) users, and users have many (5) ships.  This would make authentication/security possible, and the backend can keep track of when a user has completed setup (placing all their ships), when a ship is sunk, and when a game is completed.  Currently, I would have to rely on the frontend for that functionality, but they can all be inferred from the available data, although it's not particularly secure.
 
-* System dependencies
+== API calls (JSON)
 
-* Configuration
+* create new game  
+GET /games/new
 
-* Database creation
+receives no parametes
 
-* Database initialization
+returns the newly created game (client will need to use the id for subsequent calls).  The board is initialized 10x10, with 0,0 being the top/left corner
+* retreive details of a game
+GET    /games/:id
 
-* How to run the test suite
+receives the id of the desired game
 
-* Services (job queues, cache servers, search engines, etc.)
+returns the details (board state for both players, and damage counts) of the game
+* list all games
+GET    /games
 
-* Deployment instructions
+receives no parameters
 
-* ...
+returns list of all current games
+* place a ship
+POST   /games/placeship
 
+receives the following parameters
+1. id: id of the game
+2. player: the player whose board to place the ship on (1 or 2)
+3. orientation: horizontal or vertical ship placement ('h' or 'v')
+4. shipsize: the size of the ship being placed (2, 3, 4, or 5)
+5. xcoord: x coordinate of the top/left corner of the ship
+6. ycoord: y coordinate of the top/left corner of the ship
 
-Please feel free to use a different markup language if you do not plan to run
-<tt>rake doc:app</tt>.
+returns status and message of succesful or failed ship placement
+* fire (take turn)
+POST   /games/fire
+
+receives the following parameters
+1. id: id of the game
+2. player: the player whose board to place the ship on (1 or 2)
+3. xcoord: x coordinate of the square to fire on
+4. ycoord: y coordinate of the square to fire on
+
+returns status and message of succesful (hit or miss) or failed (invalid) fire attempt
+* delete a game     DELETE /games/:id
+
+receives id of game to be deleted
+
+returns successful or failed deletion
+
+== Known issues/improvements
+* Security - there is no authentication, so a user could make an api call to see the other user's board, or the board in other convurrent games
+* When placing a ship, the app currently uses a naive approach.  It could start placing a ship, then error out later, but will leave the part that's already been placed
+* No tracking of ships that need to be placed, or have already been placed.  Currently relying on client for that
+* No tracking of when a ship has been sunk, or the game is over.  It is up to the client to see when max damage is reached
